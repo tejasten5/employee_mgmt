@@ -1,0 +1,312 @@
+{% extends 'base.html' %}
+
+
+    {% block css %}
+    <style>
+      .search_btn{
+        height: 42px;
+      }
+    </style>
+    {% endblock %}
+ 
+    
+    
+    {% block content %}
+    <div class="container">
+
+        <ul class="nav nav-tabs" role="tablist">
+            <li class="nav-item"><a href="#hometab" role="tab" class="nav-link" data-toggle="tab">Home</a></li>
+            <li class="nav-item"><a href="#javatab" role="tab" class="nav-link" data-toggle="tab">Search</a></li>     
+          </ul>
+        
+        <!-- Nav tabs -->
+        
+        
+        
+        <!-- Tab panes -->
+        <div class="tab-content">
+          <div class="tab-pane active" id="hometab">
+
+            <div class="row">
+                <div class="col-md-12" style="margin-top: 2%;">
+                    <a href="#" id="filter" class="filter btn btn-success" style="float: right;" data-toggle="modal" data-target="#myModal">Add New Employee</a>
+                </div>
+              </div><br><br>
+            
+              <table class="table table-hover" id="employee_listing">                
+              </table>           
+          </div>
+          <div class="tab-pane" id="javatab">           
+            <br><br>
+              <div class="input-group">
+                <div class="form-outline">
+                  <input type="search" id="form1" class="form-control" placeholder="Enter Employee ID" />
+                  
+                </div> &nbsp;&nbsp;
+                <button type="button" class="btn btn-primary search_btn">
+                  <i class="fa fa-search"></i>
+                </button>
+              </div>
+
+
+              <div id="search_result">
+
+              
+              </div>
+
+          </div>
+          
+          
+        </div>
+
+
+    <!-- Add Employee Modal -->
+        <div class="modal fade" id="myModal" role="dialog">
+        <div class="modal-dialog">
+          <form id="add_employee" method="POST">
+            <!-- Modal content-->
+            <div class="modal-content">
+      
+              <div class="modal-body">
+      
+      
+                
+                  {% csrf_token %}
+                  <div class="form-group">
+                    <label for="exampleFormControlInput1">Employee ID</label>
+                    <input type="text" class="form-control" autocomplete="off" name="employee_id" id="exampleFormControlInput1"
+                      placeholder="Enter Employee ID">
+                    <span class="employee_id_error clear_span" style="color: red;"></span>
+                  </div>
+      
+                  <div class="form-group">
+                    <label for="exampleFormControlInput2">Employee Name</label>
+                    <input type="text" class="form-control" autocomplete="off" name="employee_name"
+                      id="exampleFormControlInput2" placeholder="Enter Employee Name">
+                    <span class="employee_name_error clear_span" style="color: red;"></span>
+      
+                  </div>
+      
+                  <div class="form-group">
+                    <label for="exampleFormControlTextarea3">Email ID</label>
+                    <input type="text" class="form-control" autocomplete="off" name="employee_email"
+                      id="exampleFormControlTextarea3" placeholder="Enter Email ID">
+                    <span class="employee_email_error clear_span" style="color: red;"></span>
+      
+                  </div>
+      
+                  
+      
+                
+      
+      
+      
+      
+      
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-success" id="btn_submit">Save</button>
+              </div>
+            </div>
+          </form>
+        </div>
+        </div>
+    <!-- End modal -->
+    {% endblock %}
+
+   
+
+    {% block js %}
+    <script>
+
+$(document).ready(function(){    
+    initTable();
+});
+
+
+function initTable() {
+/**
+ * This function is used to view table.
+ *  
+ */
+
+$('#employee_listing').DataTable({
+    
+    "aaSorting": [],
+    "processing": true,
+    "serverSide": true,       
+    "columnDefs": [
+            { orderable: false, targets: 0 },
+            { orderable: false, targets: 4 }
+                        
+        ],
+    "columns": [                    
+        {'data': 'srno', 'title': 'Sr.No.', "sClass": 'text-center'},
+        {'data': 'employee_id', 'title': 'Employee ID', "sClass": 'text-center'},               
+        {'data': 'employee_name', 'title': 'Employee Name', "sClass": 'text-center'},
+        {'data': 'employee_email', 'title': 'Email', "sClass": 'text-center'},
+        {'data': 'action', 'title': 'Action', "sClass": 'text-center'},       
+    ],
+    dom: 'Bfrtip',
+    "ajax":{
+        type: "POST",
+        url:"/api/employee_list/",    
+        data: function(d){           
+            d.csrfmiddlewaretoken=  getCookie('csrftoken');            
+            
+        },   
+        error:function(data){
+            
+        }
+    },
+    destroy: true,            
+    lengthChange: true, 
+   
+})
+}
+
+
+$(document).on('click', '#btn_submit', function () {
+
+            $(".clear_span").text('');
+            var element = $(this);
+            $(element).prop('disabled', true);
+            $(element).html('<i class="fa fa-spinner fa-spin"></i> Processing');
+
+            var form = new FormData($('#add_employee')[0]);
+
+            $.ajax({
+              type: "POST",
+              processData: false,
+              contentType: false,
+              url: "/add/employee/",
+              data: form,
+              success: function (response) {
+
+                $.confirm({
+                  title: 'Success',
+                  content: 'Employee added successfully !',
+                  type: 'green',
+                  typeAnimated: true,
+                  buttons: {
+                    tryAgain: {
+                      text: 'OK',
+                      btnClass: 'btn-green',
+                      action: function () {
+                        location.reload()
+                      }
+                    },
+
+                  }
+                });
+
+
+
+                $(element).prop('disabled', false);
+                $(element).html('Save');
+              },
+              error: function (err) {
+                $.each(err.responseJSON, function (idx, val) {
+                  $("#add_employee").find(`.${idx}_error`).html(val[0]);
+                });
+                $(element).prop('disabled', false);
+                $(element).html('Save');
+              }
+            })
+})
+
+
+  $(document).on('click','.delete_employee',function(){
+
+    employee_id = $(this).data('id')
+    emp_name =  $(this).data('empname')
+
+    $.confirm({ 
+        title: ``,
+        content: `Are you sure to delete employee <strong>${emp_name}</strong>? `,
+        typeAnimated: true,
+        buttons: {
+            tryAgain: {
+                text: 'Confirm',
+                btnClass: 'btn-green',
+                action: function(){
+                   
+                  $.ajax({
+                    type:"POST",
+                    url:"/api/delete/employee/",
+                    data:{"employee_id":employee_id,'csrfmiddlewaretoken':getCookie('csrftoken')},
+                    success:function(response){
+                      initTable();
+                    },
+                    error:function(err){
+
+                    }
+
+                  })
+                    
+                        
+                    
+                    
+                }
+            },
+            cancel: function () {
+            }
+        }
+    });
+
+
+
+  })
+
+
+  $(document).on('click','.search_btn',function(){
+      
+    search_query = $("#form1").val().trim()
+
+    if(search_query){
+      // search_result
+      $("#search_result").html(``)
+
+      $.ajax({
+        type:"POST",
+        url:"/search/employee/",
+        data:{"search_query":search_query,"csrfmiddlewaretoken":getCookie('csrftoken')},
+        success:function(response){
+          
+          result = ``
+          $.each(response.employess,function(idx,val){
+              result = `  <div class="mt-3">
+                  <ul class="list list-inline">
+                      <li class="d-flex justify-content-between">
+                          <div class="d-flex flex-row align-items-center">
+                              <div class="ml-2">
+                                  <h6 class="mb-0">${val.employee_name}</h6>
+                                  <div class="d-flex flex-row mt-1 text-black-50 date-time">
+                                      <div><i class="fa fa-calendar-o"></i><span class="ml-2">${val.employee_email}</span></div>
+                                      <div class="ml-3"><i class="fa fa-clock-o"></i><span class="ml-2">${val.employee_id}</span></div>
+                                  </div>
+                              </div>
+                          </div>
+                         
+                      </li>
+                      
+                  </ul>
+              </div>`
+          })
+          $("#search_result").html(result)
+          
+         
+
+        },
+        error:function(err){
+          $("#search_result").html(`<label style="color:red;">Employee Not Found.</label>`)
+        }
+      })
+      
+
+    }else{
+      $.alert("Enter Employee ID")
+    }
+  })
+    </script>
+    {% endblock %}
