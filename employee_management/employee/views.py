@@ -15,7 +15,7 @@ from ast import literal_eval
 
 # Create your views here.
 
-
+# Global responsein case of exception
 SERVER_ERROR = {"error":"Something went wrong ! Please contact techinical team."}
 
 
@@ -27,12 +27,15 @@ class HomeTemplateView(LoginRequiredMixin,TemplateView):
 
         Returns:
             queryset: Returns context .
-        """        
+        """            
+
         context              = super().get_context_data(**kwargs)
         context['employees'] = EmployeesInfo.objects.all()        
         return context
 
 class AdminLogin(View):
+    """This class handles login functionality.    
+    """
     def get(self,request):
         if request.user.is_authenticated:
             return redirect('/home/')        
@@ -68,7 +71,8 @@ class AddNewEmployee(View):
             form = EmployeeForm(request.POST)
             if form.is_valid():
                 form.save()     
-                return JsonResponse({"status":"OK"},status = 201)            
+                return JsonResponse({"status":"OK"},status = 201)  
+                 
             return JsonResponse(form.errors,status = 400)            
         except Exception as e:
             print(str(e))
@@ -166,26 +170,22 @@ class DeleteEmployee(View):
 
 
 class EditEmployee(View):
-    def get(self,request,pk):
-        try:
-            employee = EmployeesInfo.objects.get(id = pk)
-        except Exception as e:
-            employee = None
-        
-        context = {'employee':employee}           
-        
+    def get(self,request,pk):               
+        context = {'employee':get_object_or_404(EmployeesInfo, id = pk)}        
         return render(request,'edit_employee.html',context)
 
     def post(self,request,pk):
-        instance = get_object_or_404(EmployeesInfo, id = pk)
-        form = EmployeeForm(request.POST or None, instance=instance)
+        try:
+            instance = get_object_or_404(EmployeesInfo, id = pk)
+            form = EditEmployeeForm(request.POST or None, instance=instance)
+            if form.is_valid():            
+                form.save()
+                return  JsonResponse({"status":"OK"},status = 200)    
+            return  JsonResponse({"errors":form.errors},status = 400)
+        except Exception as e:
+            print(str(e))
+            return JsonResponse(SERVER_ERROR,status = 500)
         
-        if form.is_valid():            
-            form.save()
-            return redirect('/home/')
-        return render(request, 'edit_employee.html', {'form': form})
-
-
 class EmployeeSearch(View):
     def post(self,request):
         try:
